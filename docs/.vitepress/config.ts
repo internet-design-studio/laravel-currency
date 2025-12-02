@@ -3,9 +3,9 @@ import {defineConfig} from 'vitepress';
 export default defineConfig({
   base: '/laravel-currency/',
   lang: 'en-US',
-  title: 'Laravel CurrencyEnum Package',
-  titleTemplate: '%s | Laravel CurrencyEnum Package',
-  description: 'Extensible Laravel package for working with fiat and crypto currency exchange rates',
+  title: 'Laravel Currency Package',
+  titleTemplate: '%s | Laravel Currency Package',
+  description: 'Laravel package for retrieve fiat and crypto currency exchange rates',
   cleanUrls: true,
   head: [['link', {rel: 'icon', type: 'image/x-icon', href: '/favicon.ico'}]],
   themeConfig: {
