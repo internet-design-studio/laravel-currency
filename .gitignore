@@ -1,10 +1,8 @@
 /vendor/
-/composer.lock
 /.phpunit.result.cache
 .phpunit.cache
 .phpstan
 /node_modules/
-/package-lock.json
 /docs/build/
 /.DS_Store
 /.env
