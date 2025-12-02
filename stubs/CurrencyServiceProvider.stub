@@ -1,0 +1,15 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Providers;
+
+use SvkDigital\Currency\CurrencyServiceProvider as ServiceProvider;
+
+final class CurrencyServiceProvider extends ServiceProvider
+{
+    protected function provider(): string
+    {
+        // Put any logic for resolve provider name
+        return config('currency.provider');
+    }
+}

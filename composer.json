@@ -1,0 +1,69 @@
+{
+    "name": "svk-digital/laravel-currency",
+    "description": "Extensible Laravel package for working with fiat and crypto currency exchange rates.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "cbr",
+        "currency",
+        "exchange-rates",
+        "crypto",
+        "xml",
+        "soap"
+    ],
+    "authors": [
+        {
+            "name": "Internet Design Studio"
+        },
+        {
+          "name": "Andrey Gurkovskii",
+          "homepage": "https://t.me/middle_not_final"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "illuminate/support": "^9.0|^10.0|^11.0|^12.0",
+        "illuminate/http": "^9.0|^10.0|^11.0|^12.0",
+        "illuminate/contracts": "^9.0|^10.0|^11.0|^12.0",
+        "illuminate/cache": "^9.0|^10.0|^11.0|^12.0",
+      "ext-simplexml": "*",
+      "ext-libxml": "*"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^7.0|^8.0|^9.0",
+        "phpunit/phpunit": "^10.5",
+        "phpstan/phpstan": "^1.11",
+        "phpstan/phpstan-phpunit": "^1.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "SvkDigital\\Currency\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SvkDigital\\Currency\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse",
+        "format": "pint",
+        "format:test": "pint --test"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+              "SvkDigital\\Currency\\CurrencyServiceProvider"
+            ],
+            "aliases": {
+                "Currency": "SvkDigital\\Currency\\Facades\\Currency"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
+

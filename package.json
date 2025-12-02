@@ -1,0 +1,15 @@
+{
+    "name": "laravel-cbr-docs",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "docs:start": "vitepress dev docs",
+        "docs:build": "vitepress build docs",
+        "docs:serve": "vitepress preview docs"
+    },
+    "devDependencies": {
+        "vitepress": "^1.5.0"
+    }
+}
+
