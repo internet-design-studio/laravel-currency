@@ -1,6 +1,7 @@
 import {defineConfig} from 'vitepress';
 
 export default defineConfig({
+  base: '/laravel-currency/',
   lang: 'en-US',
   title: 'Laravel CurrencyEnum Package',
   titleTemplate: '%s | Laravel CurrencyEnum Package',
