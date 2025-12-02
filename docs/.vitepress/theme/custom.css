@@ -5,4 +5,13 @@
   --vp-c-brand-4: #0f84cf;
 }
 
+/* Fix for SVK logo size in social links */
+.VPSocialLinks a[href*="internet-design.ru"] svg,
+.VPSocialLinks svg#svk {
+  width: 24px !important;
+  height: auto !important;
+  max-height: 24px !important;
+  display: block;
+}
+
 
