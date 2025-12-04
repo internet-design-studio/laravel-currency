@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SvkDigital\Currency\Http;
+namespace SvkDigital\Currency\Adapters\Cbr;
 
 use DateTimeImmutable;
 use DateTimeInterface;

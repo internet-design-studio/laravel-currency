@@ -6,17 +6,17 @@ namespace SvkDigital\Currency\ValueObjects;
 
 use InvalidArgumentException;
 
-final class CryptoCurrency
+final class CryptoCurrency implements Currency
 {
     public function __construct(
         private string $symbol,
-        private string $network
+        private ?string $network = null,
     ) {
         $symbol = mb_strtoupper(mb_trim($symbol));
-        $network = mb_strtolower(mb_trim($network));
+        $network = mb_strtolower(mb_trim($network ?? ''));
 
-        if ($symbol === '' || $network === '') {
-            throw new InvalidArgumentException('CryptoCurrency requires non-empty symbol and network.');
+        if ($symbol === '') {
+            throw new InvalidArgumentException('CryptoCurrency requires non-empty symbol.');
         }
 
         $this->symbol = $symbol;
@@ -33,13 +33,26 @@ final class CryptoCurrency
         return $this->network;
     }
 
-    public function equals(self $other): bool
+    public function equals(Currency $other): bool
     {
-        return $this->symbol === $other->symbol && $this->network === $other->network;
+        if ($other instanceof CryptoCurrency) {
+            return $this->symbol === $other->symbol && $this->network === $other->network;
+        }
+
+        return false;
+    }
+
+    public function code(): string
+    {
+        return (string) $this;
     }
 
     public function __toString(): string
     {
-        return $this->symbol.'@'.$this->network;
+        if ($this->network !== '') {
+            return $this->symbol.'@'.$this->network;
+        }
+
+        return $this->symbol;
     }
 }

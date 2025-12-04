@@ -8,10 +8,9 @@ use DateTimeInterface;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use SvkDigital\Currency\Contracts\CurrencyAdapter;
 use SvkDigital\Currency\Contracts\CurrencyServiceContract;
-use SvkDigital\Currency\Enums\CurrencyEnum;
 use SvkDigital\Currency\ValueObjects\CryptoCurrency;
-use SvkDigital\Currency\ValueObjects\CurrencyCode;
 use SvkDigital\Currency\ValueObjects\CurrencyRate;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 
 final class CurrencyService implements CurrencyServiceContract
 {
@@ -41,75 +40,62 @@ final class CurrencyService implements CurrencyServiceContract
         );
     }
 
+    /**
+     * @param  array<int, FiatCurrency|CryptoCurrency|string>  $quote
+     * @return CurrencyRate|array<int, CurrencyRate>
+     */
     public function getRate(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $base,
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string|array $quote,
+        FiatCurrency|CryptoCurrency $base,
+        FiatCurrency|CryptoCurrency|array $quote,
         DateTimeInterface $date
     ): CurrencyRate|array {
+        $rateService = $this->rate()
+            ->base($this->normalizeCurrencyLike($base))
+            ->date($date);
 
-        if (! $this->shouldCache()) {
-            return $this->adapter->getRate($base, $quote, $date);
+        if (is_array($quote)) {
+            $rateService->quotes(
+                array_map(
+                    fn (FiatCurrency|CryptoCurrency|string $q) => $this->normalizeCurrencyLike($q),
+                    $quote
+                )
+            );
+        } else {
+            $rateService->quote($this->normalizeCurrencyLike($quote));
         }
 
-        $key = $this->cacheKey($base, $quote, $date);
-
-        /** @var CurrencyRate|array<int, CurrencyRate> $cached */
-        $cached = $this->cache->remember(
-            $key,
-            max(1, $this->cacheTtl),
-            fn () => $this->adapter->getRate($base, $quote, $date)
-        );
-
-        return $cached;
+        return $rateService->get();
     }
 
-    /**
-     * @param  CurrencyEnum|CurrencyCode|CryptoCurrency|string|array<int, CurrencyEnum|CurrencyCode|CryptoCurrency|string>  $quote
-     */
-    private function cacheKey(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $base,
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string|array $quote,
-        DateTimeInterface $date
-    ): string {
-        $baseKey = $this->stringifyCurrencyLike($base);
-        $quoteItems = is_array($quote) ? $quote : [$quote];
-
-        $quoteKeys = array_map(
-            fn (CurrencyEnum|CurrencyCode|CryptoCurrency|string $q) => $this->stringifyCurrencyLike($q),
-            $quoteItems
-        );
-
-        sort($quoteKeys);
-
-        return sprintf(
-            '%s_%s_%s_%s',
-            $this->cachePrefix,
-            $date->format('Ymd'),
-            $baseKey,
-            implode('-', $quoteKeys)
-        );
-    }
-
-    private function stringifyCurrencyLike(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $currency
-    ): string {
-        if ($currency instanceof CurrencyCode) {
-            return $currency->value();
-        }
-
-        if ($currency instanceof CurrencyEnum) {
-            return $currency->value;
-        }
-
-        if ($currency instanceof CryptoCurrency) {
-            return (string) $currency;
-        }
-
-        return mb_strtoupper(mb_trim((string) $currency));
-    }
-
-    private function shouldCache(): bool
+    public function rate(): CurrencyRatesService
     {
-        return $this->cacheEnabled && $this->cache !== null;
+        return new CurrencyRatesService(
+            $this->adapter,
+            $this->cache,
+            $this->cacheEnabled,
+            $this->cacheTtl,
+            $this->cachePrefix
+        );
+    }
+
+    public function convert(): CurrencyConverterService
+    {
+        return new CurrencyConverterService(
+            $this->adapter,
+            $this->cache,
+            $this->cacheEnabled,
+            $this->cacheTtl,
+            $this->cachePrefix
+        );
+    }
+
+    private function normalizeCurrencyLike(
+        FiatCurrency|CryptoCurrency|string $currency
+    ): FiatCurrency|CryptoCurrency {
+        if ($currency instanceof FiatCurrency || $currency instanceof CryptoCurrency) {
+            return $currency;
+        }
+
+        return new FiatCurrency((string) $currency);
     }
 }

@@ -4,7 +4,7 @@ export default defineConfig({
   base: '/laravel-currency/',
   lang: 'en-US',
   title: 'Laravel Currency Package',
-  titleTemplate: 'Laravel Currency Package',
+  titleTemplate: '%s',
   description: 'Laravel package for retrieve fiat and crypto currency exchange rates',
   cleanUrls: true,
   head: [['link', {rel: 'icon', type: 'image/x-icon', href: '/laravel-currency/favicon.ico'}]],
@@ -15,6 +15,7 @@ export default defineConfig({
       {text: 'Configuration', link: '/configuration'},
       {text: 'Adapters', link: '/adapters'},
       {text: 'Custom Adapters', link: '/custom-adapters'},
+      {text: 'Testing', link: '/testing'},
     ],
     sidebar: [
       {
@@ -34,6 +35,12 @@ export default defineConfig({
         items: [
           {text: 'Built-in Adapters', link: '/adapters'},
           {text: 'Custom Adapters', link: '/custom-adapters'},
+        ],
+      },
+      {
+        text: 'Testing',
+        items: [
+          {text: 'Testing', link: '/testing'},
         ],
       },
     ],

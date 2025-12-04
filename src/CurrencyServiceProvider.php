@@ -6,11 +6,10 @@ namespace SvkDigital\Currency;
 
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
-use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 use SvkDigital\Currency\Contracts\CurrencyAdapter;
 use SvkDigital\Currency\Contracts\CurrencyServiceContract;
+use SvkDigital\Currency\Factories\AdapterFactory;
 use SvkDigital\Currency\Services\CurrencyService;
 
 class CurrencyServiceProvider extends ServiceProvider
@@ -18,29 +17,10 @@ class CurrencyServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(CurrencyAdapter::class, function ($app) {
-
             $providerKey = $this->provider();
             $providersConfig = config("currency.providers.$providerKey", []);
 
-            /** @var string $providerKey */
-            $camelized = Str::camel($providerKey);
-            $normalizedProvider = Str::replace('_', '', $camelized);
-            /** @var string $normalizedProvider */
-            $adapterClassName = Str::ucfirst($normalizedProvider).'Adapter';
-            /** @var class-string<CurrencyAdapter> $adapter */
-            $adapter = '\\SvkDigital\\CurrencyEnum\\Adapters\\'.$adapterClassName;
-
-            if (! method_exists($adapter, 'fromConfig')) {
-                throw new \RuntimeException("Adapter class {$adapter} does not have fromConfig method.");
-            }
-
-            /** @var callable(HttpFactory, array<string, mixed>): CurrencyAdapter $fromConfig */
-            $fromConfig = [$adapter, 'fromConfig'];
-
-            return $fromConfig(
-                $app->make(HttpFactory::class),
-                $providersConfig
-            );
+            return AdapterFactory::create($providerKey, $providersConfig);
         });
 
         $this->app->singleton(CurrencyServiceContract::class, function ($app) {
@@ -72,7 +52,7 @@ class CurrencyServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                $this->configPath() => $this->app->configPath('currency.php'),
+                $this->configPath() => $this->app->configPath('currency.php'), 'currency-config',
             ]);
             $this->publishes([
                 __DIR__.'/../stubs/CurrencyServiceProvider.stub' => app_path('Providers/CurrencyServiceProvider.php'),

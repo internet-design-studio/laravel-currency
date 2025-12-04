@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
-use SvkDigital\Currency\Http\CbrXmlClient;
+use SvkDigital\Currency\Adapters\Cbr\CbrXmlClient;
 use SvkDigital\Currency\Tests\TestCase;
 
 final class CbrXmlClientTest extends TestCase

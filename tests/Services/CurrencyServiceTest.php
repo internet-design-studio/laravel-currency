@@ -9,10 +9,10 @@ use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository as CacheRepository;
 use PHPUnit\Framework\MockObject\MockObject;
 use SvkDigital\Currency\Contracts\CurrencyAdapter;
-use SvkDigital\Currency\Enums\CurrencyEnum;
 use SvkDigital\Currency\Services\CurrencyService;
 use SvkDigital\Currency\Tests\TestCase;
 use SvkDigital\Currency\ValueObjects\CurrencyRate;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 
 final class CurrencyServiceTest extends TestCase
 {
@@ -24,10 +24,14 @@ final class CurrencyServiceTest extends TestCase
             ['cache' => ['enabled' => false]]
         );
 
-        $rate = $service->getRate(CurrencyEnum::RUB, CurrencyEnum::USD, new DateTimeImmutable('2024-11-30'));
+        $rate = $service->getRate(
+            new FiatCurrency('RUB'),
+            new FiatCurrency('USD'),
+            new DateTimeImmutable('2024-11-30')
+        );
 
         $this->assertInstanceOf(CurrencyRate::class, $rate);
-        $this->assertSame('USD', $rate->code->value());
+        $this->assertSame('USD', $rate->currency->code());
     }
 
     public function test_it_uses_cache_when_enabled(): void
@@ -48,8 +52,8 @@ final class CurrencyServiceTest extends TestCase
 
         $date = new DateTimeImmutable('2024-11-30');
 
-        $service->getRate(CurrencyEnum::RUB, CurrencyEnum::USD, $date);
-        $service->getRate(CurrencyEnum::RUB, CurrencyEnum::USD, $date);
+        $service->getRate(new FiatCurrency('RUB'), new FiatCurrency('USD'), $date);
+        $service->getRate(new FiatCurrency('RUB'), new FiatCurrency('USD'), $date);
 
         $this->addToAssertionCount(1); // expectations already assert caching
     }
@@ -77,8 +81,8 @@ final class CurrencyServiceTest extends TestCase
         );
 
         $rates = $service->getRate(
-            CurrencyEnum::RUB,
-            [CurrencyEnum::USD, CurrencyEnum::EUR],
+            new FiatCurrency('RUB'),
+            [new FiatCurrency('USD'), new FiatCurrency('EUR')],
             new DateTimeImmutable('2024-11-30')
         );
 
@@ -99,7 +103,7 @@ final class CurrencyServiceTest extends TestCase
     private function sampleRate(?string $code = null): CurrencyRate
     {
         return new CurrencyRate(
-            code: new \SvkDigital\Currency\ValueObjects\CurrencyCode($code ?? 'USD'),
+            currency: new FiatCurrency($code ?? 'USD'),
             name: 'US Dollar',
             numericCode: '840',
             rate: 90.1234,

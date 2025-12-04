@@ -5,25 +5,28 @@ declare(strict_types=1);
 namespace SvkDigital\Currency\Tests\Enums;
 
 use PHPUnit\Framework\TestCase;
-use SvkDigital\Currency\Enums\CurrencyEnum;
-use SvkDigital\Currency\ValueObjects\CurrencyCode;
+use SvkDigital\Currency\ValueObjects\CryptoCurrency;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 
 final class CurrencyTest extends TestCase
 {
-    public function test_country_and_numeric_code_accessors(): void
+    public function test_fiat_currency_normalizes_and_compares_by_code(): void
     {
-        $usd = CurrencyEnum::USD;
+        $usdLower = new FiatCurrency('usd');
+        $usdUpper = new FiatCurrency('USD');
 
-        $this->assertStringContainsString('США', $usd->country());
-        $this->assertSame('Доллар США', $usd->currencyName());
-        $this->assertSame('840', $usd->numericCode());
+        $this->assertSame('USD', $usdLower->code());
+        $this->assertTrue($usdLower->equals($usdUpper));
     }
 
-    public function test_it_converts_to_currency_code(): void
+    public function test_crypto_currency_code_and_equality(): void
     {
-        $code = CurrencyEnum::EUR->toCurrencyCode();
+        $btcMainnet = new CryptoCurrency('btc', 'btc');
+        $btcMainnetUpper = new CryptoCurrency('BTC', 'btc');
+        $ethMainnet = new CryptoCurrency('eth', 'eth');
 
-        $this->assertInstanceOf(CurrencyCode::class, $code);
-        $this->assertSame('EUR', $code->value());
+        $this->assertSame('BTC@btc', $btcMainnet->code());
+        $this->assertTrue($btcMainnet->equals($btcMainnetUpper));
+        $this->assertFalse($btcMainnet->equals($ethMainnet));
     }
 }

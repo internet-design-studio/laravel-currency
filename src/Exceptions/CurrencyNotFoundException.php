@@ -10,6 +10,6 @@ final class CurrencyNotFoundException extends RuntimeException
 {
     public static function forCode(string $code): self
     {
-        return new self(sprintf('CurrencyEnum with code %s was not found in the rates list.', $code));
+        return new self(sprintf('Currency with code %s was not found in the rates list.', $code));
     }
 }

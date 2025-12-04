@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SvkDigital\Currency\ValueObjects;
 
 use DateTimeImmutable;
-use SvkDigital\Currency\Enums\CurrencyEnum;
 use SvkDigital\Currency\Exceptions\CurrencyNotFoundException;
 
 final class RatesOnDate
@@ -23,30 +22,30 @@ final class RatesOnDate
         public readonly array $rates
     ) {
         foreach ($rates as $rate) {
-            $this->indexedRates[$rate->code->value()] = $rate;
+            $this->indexedRates[$rate->currency->code()] = $rate;
         }
     }
 
     /**
      * Find a rate by currency code (case-insensitive).
      */
-    public function find(CurrencyEnum|CurrencyCode|string $code): ?CurrencyRate
+    public function find(FiatCurrency|string $code): ?CurrencyRate
     {
         $normalized = $this->normalizeCode($code);
 
-        return $this->indexedRates[$normalized->value()] ?? null;
+        return $this->indexedRates[$normalized->code()] ?? null;
     }
 
     /**
      * Get a rate by code or throw CurrencyNotFoundException.
      */
-    public function get(CurrencyEnum|CurrencyCode|string $code): CurrencyRate
+    public function get(FiatCurrency $code): CurrencyRate
     {
         $normalized = $this->normalizeCode($code);
-        $rate = $this->indexedRates[$normalized->value()] ?? null;
+        $rate = $this->indexedRates[$normalized->code()] ?? null;
 
         if ($rate === null) {
-            throw CurrencyNotFoundException::forCode($normalized->value());
+            throw CurrencyNotFoundException::forCode($normalized->code());
         }
 
         return $rate;
@@ -60,16 +59,12 @@ final class RatesOnDate
         return $this->rates;
     }
 
-    private function normalizeCode(CurrencyEnum|CurrencyCode|string $code): CurrencyCode
+    private function normalizeCode(FiatCurrency|string $code): FiatCurrency
     {
-        if ($code instanceof CurrencyCode) {
+        if ($code instanceof FiatCurrency) {
             return $code;
         }
 
-        if ($code instanceof CurrencyEnum) {
-            return $code->toCurrencyCode();
-        }
-
-        return new CurrencyCode($code);
+        return new FiatCurrency($code);
     }
 }

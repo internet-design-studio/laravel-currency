@@ -8,9 +8,12 @@ use Illuminate\Support\Facades\Facade;
 use SvkDigital\Currency\Contracts\CurrencyAdapter;
 use SvkDigital\Currency\Contracts\CurrencyServiceContract;
 use SvkDigital\Currency\Fakes\FakeCurrencyAdapter;
+use SvkDigital\Currency\Services\CurrencyConverterService;
+use SvkDigital\Currency\Services\CurrencyRatesService;
 
 /**
- * @method static \SvkDigital\Currency\ValueObjects\CurrencyRate|\SvkDigital\Currency\ValueObjects\CurrencyRate[] getRate(mixed $base, mixed $quote, \DateTimeInterface $date)
+ * @method static CurrencyRatesService rate()
+ * @method static CurrencyConverterService convert()
  *
  * @see CurrencyServiceContract
  */

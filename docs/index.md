@@ -4,36 +4,12 @@ title: Getting Started
 
 ## Introduction
 
-`svk-digital/laravel-currency` is an extensible Laravel package for working with fiat and crypto currency exchange rates. Out of the box it ships with adapters for the Central Bank of Russia DailyInfo web-service and CurrencyFreaks API, but you can plug in any provider via configuration or custom adapters.
+`svk-digital/laravel-currency` is an extensible Laravel package for working with fiat and crypto currency exchange rates. Out of the box it ships with adapters for the Central Bank of Russia DailyInfo web-service, CurrencyFreaks API, and ExchangeRateHost API, but you can plug in any provider via configuration or custom adapters.
 
 ## Requirements
 
 - PHP ^8.1
 - Laravel 9.x, 10.x, 11.x or 12.x
-
-## Quick Start
-
-```php
-use SvkDigital\Currency\Contracts\CurrencyServiceContract;
-use SvkDigital\Currency\Enums\CurrencyEnum;
-use SvkDigital\Currency\Facades\Currency as CurrencyFacade;
-
-final class RatesController
-{
-    public function __construct(private CurrencyServiceContract $rates) {}
-
-    public function __invoke()
-    {
-        $today = now();
-
-        // Base currency, quote currency, date
-        $usdToEur = $this->rates->getRate(CurrencyEnum::USD, CurrencyEnum::EUR, $today);
-
-        // Or via facade
-        $usdToRub = CurrencyFacade::getRate(CurrencyEnum::USD, CurrencyEnum::RUB, $today);
-    }
-}
-```
 
 ## Installation
 
@@ -43,20 +19,7 @@ Install the package via Composer:
 composer require svk-digital/laravel-currency
 ```
 
-The service provider and facade are auto-discovered by Laravel. However, if you need to manually register the service provider, you can publish it:
-
-```bash
-php artisan vendor:publish --tag=currency-provider
-```
-
-This will create `app/Providers/CurrencyServiceProvider.php`. Then register it in `config/app.php`:
-
-```php
-'providers' => [
-    // ...
-    App\Providers\CurrencyServiceProvider::class,
-],
-```
+The service provider and facade are auto-discovered by Laravel.
 
 ### Publishing Configuration
 
@@ -68,107 +31,131 @@ php artisan vendor:publish --tag=currency-config
 
 This will create `config/currency.php` in your application.
 
-## Usage
+See [Configuration](configuration.md) for detailed configuration options.
 
-### Service Container Injection
+## Quick Start
+
+### Getting Exchange Rates
+
+The package provides a fluent API for getting exchange rates:
 
 ```php
+use DateTimeImmutable;
 use SvkDigital\Currency\Contracts\CurrencyServiceContract;
-use SvkDigital\Currency\Enums\CurrencyEnum;
+use SvkDigital\Currency\Facades\Currency;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 
-class RatesController
+// Via dependency injection
+final class RatesController
 {
     public function __construct(private CurrencyServiceContract $currencyService) {}
 
     public function __invoke()
     {
-        $date = now();
+        $date = new DateTimeImmutable('2024-11-30');
 
-        // Base = RUB (CBR adapter), quote = USD
-        $rubToUsd = $this->currencyService->getRate(CurrencyEnum::RUB, CurrencyEnum::USD, $date);
+        // Get a single exchange rate
+        $rate = $this->currencyService
+            ->rate()
+            ->base(new FiatCurrency('RUB'))
+            ->quote(new FiatCurrency('USD'))
+            ->date($date)
+            ->get();
+
+        // Or via facade
+        $rate = Currency::rate()
+            ->base(new FiatCurrency('RUB'))
+            ->quote(new FiatCurrency('USD'))
+            ->date($date)
+            ->get();
+
+        // Get multiple exchange rates at once
+        $rates = Currency::rate()
+            ->base(new FiatCurrency('RUB'))
+            ->quotes([
+                new FiatCurrency('USD'),
+                new FiatCurrency('EUR'),
+                new FiatCurrency('GBP')
+            ])
+            ->date($date)
+            ->get();
     }
 }
 ```
 
-### Facade
+### Converting Currency Amounts
+
+Convert amounts from one currency to another:
 
 ```php
-use SvkDigital\Currency\Enums\CurrencyEnum;
-use SvkDigital\Currency\Facades\Currency as CurrencyFacade;
+use DateTimeImmutable;
+use SvkDigital\Currency\Facades\Currency;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 
-$eurToRub = CurrencyFacade::getRate(CurrencyEnum::EUR, CurrencyEnum::RUB, now());
+$date = new DateTimeImmutable('2024-11-30');
+
+// Convert 1000 RUB to USD
+$result = Currency::convert()
+    ->base(new FiatCurrency('RUB'))
+    ->quote(new FiatCurrency('USD'))
+    ->amount(1000)
+    ->date($date)
+    ->get();
+
+// If date is not specified, current date is used
+$result = Currency::convert()
+    ->base(new FiatCurrency('RUB'))
+    ->quote(new FiatCurrency('USD'))
+    ->amount(1000)
+    ->get();
 ```
 
-### Multiple Quotes
+### Working with Currency Objects
 
-You can request rates for multiple quote currencies at once:
-
-```php
-$rates = $currencyService->getRate(
-    Currency::USD,
-    [Currency::EUR, Currency::GBP, Currency::RUB],
-    now()
-);
-
-// Returns an array of CurrencyRate objects
-foreach ($rates as $rate) {
-    echo $rate->code->value() . ': ' . $rate->rate . PHP_EOL;
-}
-```
-
-## Currency Enum
-
-The package exposes `SvkDigital\Currency\Enums\Currency`, a string-backed enum that covers the ISO-4217 table. Each case carries helper methods:
-
-- **`country()`** – returns the country (or list of territories) where the currency is used.
-- **`currencyName()`** – localized currency name.
-- **`numericCode()`** – numeric ISO code (e.g., `840` for USD).
-- **`toCurrencyCode()`** – converts to `CurrencyCode` value object.
+The package provides value objects for working with currencies:
 
 ```php
-use SvkDigital\Currency\Enums\CurrencyEnum;
-
-CurrencyEnum::USD->country();      // "Американское Самоа, ..., США, ..."
-CurrencyEnum::USD->currencyName(); // "Доллар США"
-CurrencyEnum::USD->numericCode();  // "840"
-```
-
-## CryptoCurrency Value Object
-
-For crypto assets there is a `SvkDigital\Currency\ValueObjects\CryptoCurrency` value object:
-
-```php
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 use SvkDigital\Currency\ValueObjects\CryptoCurrency;
 
-$btcMainnet = new CryptoCurrency('BTC', 'bitcoin');
+// Fiat currencies (ISO 4217 codes)
+$usd = new FiatCurrency('USD');
+$rub = new FiatCurrency('RUB');
+$eur = new FiatCurrency('EUR');
+
+// Crypto currencies
+$btc = new CryptoCurrency('BTC', 'bitcoin');
+$eth = new CryptoCurrency('ETH', 'ethereum');
 ```
 
-Support for concrete crypto providers can be added via custom adapters.
+### Working with CurrencyRate Results
 
-## Error Handling
-
-All adapters throw `CurrencyAdapterException` when HTTP requests fail:
-
-- `CurrencyAdapterException::requestFailed()` - When an HTTP request fails (4xx, 5xx errors)
-- `CurrencyAdapterException::connectionFailed()` - When a connection cannot be established
-- `CurrencyAdapterException::invalidResponse()` - When the response format is invalid or missing required data
-
-Example error handling:
+The `get()` method returns a `CurrencyRate` object (or array of `CurrencyRate` objects):
 
 ```php
-use SvkDigital\Currency\Exceptions\CurrencyAdapterException;
+$rate = Currency::rate()
+    ->base(new FiatCurrency('RUB'))
+    ->quote(new FiatCurrency('USD'))
+    ->date($date)
+    ->get();
 
-try {
-    $rate = $currencyService->getRate(Currency::USD, Currency::EUR, now());
-} catch (CurrencyAdapterException $e) {
-    // Handle adapter errors (network issues, API errors, etc.)
-    logger()->error('CurrencyEnum adapter error', ['exception' => $e]);
-}
+// Access rate properties
+$rate->currency;      // FiatCurrency|CryptoCurrency object
+$rate->name;          // string - currency name (e.g., "US Dollar")
+$rate->numericCode;   // string - ISO numeric code (e.g., "840")
+$rate->rate;          // float - raw rate from provider
+$rate->unitRate;      // float|null - rate per unit
+$rate->nominal;       // int|null - nominal value
+
+// Helper methods
+$rate->perUnit();     // float - rate per unit (unitRate or rate/nominal)
+$rate->toArray();     // array - convert to array
+(string) $rate;       // string - string representation
 ```
 
 ## Next Steps
 
-- [Configuration](configuration.md) - Learn how to configure the package
-- [Built-in Adapters](adapters.md) - Explore available adapters
+- [Configuration](configuration.md) - Configure providers, cache, and service provider
+- [Built-in Adapters](adapters.md) - Learn about CBR, CurrencyFreaks, and ExchangeRateHost adapters
 - [Custom Adapters](custom-adapters.md) - Create your own adapter
-- [Service Provider Override](custom-adapters.md#dynamic-provider-selection) - Override provider selection logic
+- [Testing](testing.md) - Test your code with fake exchange rates

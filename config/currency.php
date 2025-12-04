@@ -59,6 +59,17 @@ return [
                 ],
             ],
         ],
+        'exchange_rate_host' => [
+            'base_uri' => env('EXCHANGE_RATE_HOST_BASE_URI', 'https://api.exchangerate.host'),
+            'access_key' => env('EXCHANGE_RATE_HOST_ACCESS_KEY'), // опционально
+            'http' => [
+                'timeout' => env('EXCHANGE_RATE_HOST_HTTP_TIMEOUT', 10.0),
+                'retry' => [
+                    'times' => env('EXCHANGE_RATE_HOST_HTTP_RETRY_TIMES', 1),
+                    'sleep' => env('EXCHANGE_RATE_HOST_HTTP_RETRY_SLEEP', 100),
+                ],
+            ],
+        ],
     ],
 
     /*

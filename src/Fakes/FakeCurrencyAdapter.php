@@ -6,9 +6,8 @@ namespace SvkDigital\Currency\Fakes;
 
 use DateTimeInterface;
 use SvkDigital\Currency\Contracts\CurrencyAdapter;
-use SvkDigital\Currency\Enums\CurrencyEnum;
 use SvkDigital\Currency\ValueObjects\CryptoCurrency;
-use SvkDigital\Currency\ValueObjects\CurrencyCode;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 use SvkDigital\Currency\ValueObjects\CurrencyRate;
 
 /**
@@ -19,15 +18,25 @@ use SvkDigital\Currency\ValueObjects\CurrencyRate;
  *
  * @example
  * ```php
- * use SvkDigital\CurrencyEnum\Facades\CurrencyEnum;
- * use SvkDigital\CurrencyEnum\Enums\CurrencyEnum;
+ * use SvkDigital\Currency\Facades\Currency;
+ * use SvkDigital\Currency\ValueObjects\FiatCurrency;
+ * use DateTimeImmutable;
  *
- * // Use the fake() method on the CurrencyEnum facade
- * CurrencyEnum::fake()
- *     ->setRateValue(CurrencyEnum::RUB, CurrencyEnum::USD, new DateTimeImmutable('2024-01-01'), 90.5);
+ * // Use the fake() method on the Currency facade
+ * Currency::fake()
+ *     ->setRateValue(
+ *         new FiatCurrency('RUB'),
+ *         new FiatCurrency('USD'),
+ *         new DateTimeImmutable('2024-01-01'),
+ *         90.5
+ *     );
  *
  * // Now all currency calls will use the fake adapter
- * $rate = CurrencyEnum::getRate(CurrencyEnum::RUB, CurrencyEnum::USD, new DateTimeImmutable('2024-01-01'));
+ * $rate = Currency::rate()
+ *     ->base(new FiatCurrency('RUB'))
+ *     ->quote(new FiatCurrency('USD'))
+ *     ->date(new DateTimeImmutable('2024-01-01'))
+ *     ->get();
  * ```
  */
 final class FakeCurrencyAdapter implements CurrencyAdapter
@@ -40,14 +49,14 @@ final class FakeCurrencyAdapter implements CurrencyAdapter
     /**
      * Set a fake exchange rate for the given currencies and date.
      *
-     * @param  CurrencyEnum|CurrencyCode|CryptoCurrency|string|array<int, CurrencyEnum|CurrencyCode|CryptoCurrency|string>  $quote
+     * @param  FiatCurrency|CryptoCurrency|string|array<int, FiatCurrency|CryptoCurrency|string>  $quote
      * @param  CurrencyRate|array<int, CurrencyRate>  $rate
      */
     public function setRate(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $base,
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string|array $quote,
-        DateTimeInterface $date,
-        CurrencyRate|array $rate
+        FiatCurrency|CryptoCurrency|string       $base,
+        FiatCurrency|CryptoCurrency|string|array $quote,
+        DateTimeInterface                                     $date,
+        CurrencyRate|array                                    $rate
     ): void {
         $key = $this->buildKey($base, $quote, $date);
         $this->rates[$key] = $rate;
@@ -57,22 +66,22 @@ final class FakeCurrencyAdapter implements CurrencyAdapter
      * Set a fake exchange rate using a simple float value.
      * This is a convenience method that creates a CurrencyRate automatically.
      *
-     * @param  CurrencyEnum|CurrencyCode|CryptoCurrency|string|array<int, CurrencyEnum|CurrencyCode|CryptoCurrency|string>  $quote
+     * @param  FiatCurrency|CryptoCurrency|string|array<int, FiatCurrency|CryptoCurrency|string>  $quote
      * @param  float|array<int, float>  $rateValue
      */
     public function setRateValue(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $base,
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string|array $quote,
-        DateTimeInterface $date,
-        float|array $rateValue
+        FiatCurrency|CryptoCurrency|string       $base,
+        FiatCurrency|CryptoCurrency|string|array $quote,
+        DateTimeInterface                                     $date,
+        float|array                                           $rateValue
     ): void {
         if (is_array($quote) && is_array($rateValue)) {
             $rates = [];
             foreach ($quote as $index => $q) {
-                $code = $this->normalizeCurrencyCode($q);
+                $currency = $this->normalizeCurrencyCode($q);
                 $rates[] = new CurrencyRate(
-                    code: $code,
-                    name: $code->value().' CurrencyEnum',
+                    currency: $currency,
+                    name: $currency->code().' Currency',
                     numericCode: '000',
                     rate: $rateValue[$index] ?? 1.0,
                     unitRate: $rateValue[$index] ?? 1.0,
@@ -85,10 +94,10 @@ final class FakeCurrencyAdapter implements CurrencyAdapter
         } elseif (is_array($rateValue)) {
             throw new \InvalidArgumentException('When quote is not an array, rateValue must not be an array.');
         } else {
-            $code = $this->normalizeCurrencyCode($quote);
+            $currency = $this->normalizeCurrencyCode($quote);
             $rate = new CurrencyRate(
-                code: $code,
-                name: $code->value().' CurrencyEnum',
+                currency: $currency,
+                name: $currency->code().' Currency',
                 numericCode: '000',
                 rate: $rateValue,
                 unitRate: $rateValue,
@@ -106,10 +115,13 @@ final class FakeCurrencyAdapter implements CurrencyAdapter
         $this->rates = [];
     }
 
+    /**
+     * @param  array<int, FiatCurrency|CryptoCurrency|string>  $quote
+     */
     public function getRate(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $base,
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string|array $quote,
-        DateTimeInterface $date
+        FiatCurrency|CryptoCurrency|string       $base,
+        FiatCurrency|CryptoCurrency|string|array $quote,
+        DateTimeInterface                                     $date
     ): CurrencyRate|array {
         $key = $this->buildKey($base, $quote, $date);
 
@@ -128,12 +140,12 @@ final class FakeCurrencyAdapter implements CurrencyAdapter
     }
 
     /**
-     * @param  CurrencyEnum|CurrencyCode|CryptoCurrency|string|array<int, CurrencyEnum|CurrencyCode|CryptoCurrency|string>  $quote
+     * @param  array<int, FiatCurrency|CryptoCurrency|string>  $quote
      */
     private function buildKey(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $base,
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string|array $quote,
-        DateTimeInterface $date
+        FiatCurrency|CryptoCurrency|string       $base,
+        FiatCurrency|CryptoCurrency|string|array $quote,
+        DateTimeInterface                                     $date
     ): string {
         $baseKey = $this->stringifyCurrency($base);
         $quoteItems = is_array($quote) ? $quote : [$quote];
@@ -149,14 +161,10 @@ final class FakeCurrencyAdapter implements CurrencyAdapter
     }
 
     private function stringifyCurrency(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $currency
+        FiatCurrency|CryptoCurrency|string $currency
     ): string {
-        if ($currency instanceof CurrencyCode) {
-            return $currency->value();
-        }
-
-        if ($currency instanceof CurrencyEnum) {
-            return $currency->value;
+        if ($currency instanceof FiatCurrency) {
+            return $currency->code();
         }
 
         if ($currency instanceof CryptoCurrency) {
@@ -167,21 +175,17 @@ final class FakeCurrencyAdapter implements CurrencyAdapter
     }
 
     private function normalizeCurrencyCode(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $currency
-    ): CurrencyCode {
-        if ($currency instanceof CurrencyCode) {
+        FiatCurrency|CryptoCurrency|string $currency
+    ): FiatCurrency {
+        if ($currency instanceof FiatCurrency) {
             return $currency;
-        }
-
-        if ($currency instanceof CurrencyEnum) {
-            return $currency->toCurrencyCode();
         }
 
         if ($currency instanceof CryptoCurrency) {
             // Use the symbol part for crypto currencies
-            return new CurrencyCode($currency->symbol());
+            return new FiatCurrency($currency->symbol());
         }
 
-        return new CurrencyCode($currency);
+        return new FiatCurrency($currency);
     }
 }

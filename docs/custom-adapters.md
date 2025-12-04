@@ -27,8 +27,7 @@ namespace App\Currency\Adapters;
 use DateTimeInterface;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use SvkDigital\Currency\Contracts\CurrencyAdapter;
-use SvkDigital\Currency\Enums\CurrencyEnum;
-use SvkDigital\Currency\ValueObjects\CurrencyCode;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 use SvkDigital\Currency\ValueObjects\CurrencyRate;
 use SvkDigital\Currency\ValueObjects\CryptoCurrency;
 
@@ -46,18 +45,18 @@ final class MyCustomAdapter implements CurrencyAdapter
      *
      * @param array<string, mixed> $config
      */
-    public static function fromConfig(HttpFactory $http, array $config): self
+    public static function fromConfig(array $config): self
     {
         return new self(
-            $http,
+            app(HttpFactory::class),
             (string) ($config['api_key'] ?? ''),
             (string) ($config['base_uri'] ?? 'https://api.example.com')
         );
     }
 
     public function getRate(
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string $base,
-        CurrencyEnum|CurrencyCode|CryptoCurrency|string|array $quote,
+        FiatCurrency|CryptoCurrency|string $base,
+        FiatCurrency|CryptoCurrency|string|array $quote,
         DateTimeInterface $date
     ): CurrencyRate|array {
         // Your implementation here
@@ -101,7 +100,7 @@ SvkDigital\Currency\Adapters\MyCustomAdapter
 
 **Note**: This approach requires placing your adapter in the package's namespace, which is not ideal for application-specific adapters.
 
-#### Option B: Override Provider Resolution (Recommended) {#option-b-override-provider-resolution-recommended}
+#### Option B: Override Provider Resolution (Recommended)
 
 Publish the service provider and override the adapter resolution logic:
 
@@ -135,10 +134,7 @@ final class CurrencyServiceProvider extends BaseServiceProvider
         $this->app->singleton(CurrencyAdapter::class, function ($app) {
             $config = config('currency.providers.my_custom', []);
             
-            return MyCustomAdapter::fromConfig(
-                $app->make(HttpFactory::class),
-                $config
-            );
+            return MyCustomAdapter::fromConfig($config);
         });
 
         // Register the currency service
@@ -175,7 +171,7 @@ Don't forget to register this provider in `config/app.php`:
 ],
 ```
 
-### Step 3: Dynamic Provider Selection {#dynamic-provider-selection}
+### Step 3: Dynamic Provider Selection
 
 You can also override the `provider()` method to dynamically select a provider based on runtime conditions:
 
@@ -218,7 +214,6 @@ This allows you to:
 - Use different providers for different users
 - Select providers based on request parameters
 - Implement provider fallback logic
-- Use multiple providers simultaneously (by creating multiple service instances)
 
 ## Best Practices
 
@@ -254,14 +249,10 @@ Handle different currency input types consistently:
 
 ```php
 private function normalizeCurrencyCode(
-    Currency|CurrencyCode|CryptoCurrency|string $currency
+    FiatCurrency|CryptoCurrency|string $currency
 ): string {
-    if ($currency instanceof CurrencyCode) {
-        return $currency->value();
-    }
-
-    if ($currency instanceof Currency) {
-        return $currency->value;
+    if ($currency instanceof FiatCurrency) {
+        return $currency->code();
     }
 
     if ($currency instanceof CryptoCurrency) {
@@ -307,9 +298,8 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\RequestException;
 use SvkDigital\Currency\Contracts\CurrencyAdapter;
-use SvkDigital\Currency\Enums\CurrencyEnum;
 use SvkDigital\Currency\Exceptions\CurrencyAdapterException;
-use SvkDigital\Currency\ValueObjects\CurrencyCode;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 use SvkDigital\Currency\ValueObjects\CurrencyRate;
 
 final class ExchangeRateApiAdapter implements CurrencyAdapter
@@ -322,10 +312,13 @@ final class ExchangeRateApiAdapter implements CurrencyAdapter
     ) {
     }
 
-    public static function fromConfig(HttpFactory $http, array $config): self
+    /**
+     * @param  array<string, mixed>  $config
+     */
+    public static function fromConfig(array $config): self
     {
         return new self(
-            $http,
+            app(HttpFactory::class),
             (string) ($config['api_key'] ?? ''),
             (string) ($config['base_uri'] ?? 'https://api.exchangerate-api.com/v4'),
             (float) ($config['timeout'] ?? 10.0)
@@ -333,8 +326,8 @@ final class ExchangeRateApiAdapter implements CurrencyAdapter
     }
 
     public function getRate(
-        CurrencyEnum|CurrencyCode|string $base,
-        CurrencyEnum|CurrencyCode|string|array $quote,
+        FiatCurrency|string $base,
+        FiatCurrency|string|array $quote,
         DateTimeInterface $date
     ): CurrencyRate|array {
         $baseCode = $this->normalizeCurrencyCode($base);
@@ -345,7 +338,7 @@ final class ExchangeRateApiAdapter implements CurrencyAdapter
 
         $result = array_map(
             fn (string $code, float $rate) => new CurrencyRate(
-                code: new CurrencyCode($code),
+                currency: new FiatCurrency($code),
                 name: $code,
                 numericCode: '000',
                 rate: $rate,
@@ -401,18 +394,13 @@ final class ExchangeRateApiAdapter implements CurrencyAdapter
         return $data['rates'];
     }
 
-    private function normalizeCurrencyCode(CurrencyEnum|CurrencyCode|string $currency): string
+    private function normalizeCurrencyCode(FiatCurrency|string $currency): string
     {
-        if ($currency instanceof CurrencyCode) {
-            return $currency->value();
-        }
-
-        if ($currency instanceof CurrencyEnum) {
-            return $currency->value;
+        if ($currency instanceof FiatCurrency) {
+            return $currency->code();
         }
 
         return strtoupper(trim((string) $currency));
     }
 }
 ```
-

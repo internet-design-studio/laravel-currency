@@ -1,6 +1,6 @@
 # Laravel Currency Package
 
-`svk-digital/laravel-currency` is an extensible Laravel package for working with fiat and crypto currency exchange rates. Out of the box it ships with adapters for the Central Bank of Russia DailyInfo web-service and CurrencyFreaks API, but you can plug in any provider via configuration or custom adapters.
+`svk-digital/laravel-currency` is an extensible Laravel package for working with fiat and crypto currency exchange rates. Out of the box it ships with adapters for the Central Bank of Russia DailyInfo web-service, CurrencyFreaks API, and ExchangeRateHost API, but you can plug in any provider via configuration or custom adapters.
 
 ## Requirements
 
@@ -10,23 +10,33 @@
 ## Quick Start
 
 ```php
+use DateTimeImmutable;
 use SvkDigital\Currency\Contracts\CurrencyServiceContract;
-use SvkDigital\Currency\Enums\CurrencyEnum;
-use SvkDigital\Currency\Facades\Currency as CurrencyFacade;
+use SvkDigital\Currency\Facades\Currency;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 
 final class RatesController
 {
-    public function __construct(private CurrencyServiceContract $rates) {}
+    public function __construct(private CurrencyServiceContract $currencyService) {}
 
     public function __invoke()
     {
-        $today = now();
+        $date = new DateTimeImmutable('2024-11-30');
 
-        // Base currency, quote currency, date
-        $usdToEur = $this->rates->getRate(CurrencyEnum::USD, CurrencyEnum::EUR, $today);
+        // Via dependency injection
+        $rate = $this->currencyService
+            ->rate()
+            ->base(new FiatCurrency('RUB'))
+            ->quote(new FiatCurrency('USD'))
+            ->date($date)
+            ->get();
 
         // Or via facade
-        $usdToRub = CurrencyFacade::getRate(CurrencyEnum::USD, CurrencyEnum::RUB, $today);
+        $rate = Currency::rate()
+            ->base(new FiatCurrency('RUB'))
+            ->quote(new FiatCurrency('USD'))
+            ->date($date)
+            ->get();
     }
 }
 ```
@@ -55,13 +65,14 @@ Full documentation is available in the [`docs/`](docs/) directory:
 
 - **[Getting Started](docs/index.md)** - Installation and basic usage
 - **[Configuration](docs/configuration.md)** - Package configuration options
-- **[Built-in Adapters](docs/adapters.md)** - Available adapters (CBR, CurrencyFreaks)
+- **[Built-in Adapters](docs/adapters.md)** - Available adapters (CBR, CurrencyFreaks, ExchangeRateHost)
+- **[Testing](docs/testing.md)** - Test your code with fake exchange rates
 - **[Custom Adapters](docs/custom-adapters.md)** - Create your own adapter and override provider selection
 
 ## Features
 
-- ✅ Multiple built-in adapters (CBR, CurrencyFreaks)
-- ✅ Support for fiat currencies via ISO-4217 enum
+- ✅ Multiple built-in adapters (CBR, CurrencyFreaks, ExchangeRateHost)
+- ✅ Support for fiat currencies via ISO-4217 value objects
 - ✅ Crypto currency support (via custom adapters)
 - ✅ Automatic caching with configurable TTL
 - ✅ Custom adapter support
@@ -81,6 +92,11 @@ Full documentation is available in the [`docs/`](docs/) directory:
 - Any base currency support
 - API key required
 
+### ExchangeRateHost Adapter
+- REST API integration
+- Any base currency support
+- Optional access key
+
 See [Built-in Adapters](docs/adapters.md) for detailed information.
 
 ## Custom Adapters
@@ -94,20 +110,25 @@ See [Custom Adapters Guide](docs/custom-adapters.md) for complete instructions.
 The package provides a `fake()` method on the `Currency` facade that allows you to mock exchange rates in your tests without making real API calls, similar to Laravel's `Http::fake()`.
 
 ```php
-use SvkDigital\Currency\Enums\CurrencyEnum;
-use SvkDigital\Currency\Facades\Currency;
 use DateTimeImmutable;
+use SvkDigital\Currency\Facades\Currency;
+use SvkDigital\Currency\ValueObjects\FiatCurrency;
 
 // In your test setup
 Currency::fake()
-    ->setRateValue(Currency::RUB, Currency::USD, new DateTimeImmutable('2024-01-01'), 90.5);
+    ->setRateValue(
+        new FiatCurrency('RUB'),
+        new FiatCurrency('USD'),
+        new DateTimeImmutable('2024-01-01'),
+        90.5
+    );
 
 // Now your code will use the fake adapter
-$rate = Currency::getRate(
-    Currency::RUB,
-    Currency::USD,
-    new DateTimeImmutable('2024-01-01')
-);
+$rate = Currency::rate()
+    ->base(new FiatCurrency('RUB'))
+    ->quote(new FiatCurrency('USD'))
+    ->date(new DateTimeImmutable('2024-01-01'))
+    ->get();
 ```
 
 ## License
